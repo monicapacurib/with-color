@@ -1,16 +1,131 @@
-# --- Intro Page ---
-elif st.session_state.page == "equalizer":
-    if "show_intro" not in st.session_state:
-        st.session_state.show_intro = True
+import streamlit as st
+import numpy as np
+import soundfile as sf
+from scipy.signal import firwin, lfilter
+import io
+import librosa
+import matplotlib.pyplot as plt
 
-    if st.session_state.show_intro:
+# --- Page Config ---
+st.set_page_config(page_title="Digital Music Equalizer", layout="centered")
+
+# --- Session state for navigation ---
+if "page" not in st.session_state:
+    st.session_state.page = "home"
+
+# --- Styles ---
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+    .stApp {
+        background: linear-gradient(135deg, #0a0a0a, #1a001a);
+        color: white;
+        font-family: 'Orbitron', sans-serif;
+    }
+
+    h1, h2, h3 {
+        color: white;
+        text-shadow: 0 0 15px #ff69b4;
+    }
+
+    .start-button {
+        background: linear-gradient(90deg, #ff5f6d, #845ec2);
+        border: none;
+        padding: 0.75em 2em;
+        font-size: 1.2em;
+        color: white;
+        font-weight: bold;
+        border-radius: 25px;
+        cursor: pointer;
+        box-shadow: 0 0 20px #ff69b4;
+        transition: 0.3s ease;
+    }
+
+    .start-button:hover {
+        background: linear-gradient(90deg, #845ec2, #ff5f6d);
+        color: black;
+    }
+
+    .center {
+        text-align: center;
+        margin-top: 10em;
+    }
+
+    .stSlider > div {
+        background-color: #111;
+        border-radius: 10px;
+        padding: 0.5em;
+    }
+
+    .stSlider input[type=range]::-webkit-slider-thumb {
+        background: #ff69b4;
+        box-shadow: 0 0 12px #ff69b4;
+    }
+
+    .stSlider input[type=range]::-webkit-slider-runnable-track {
+        background: #333;
+    }
+
+    .stDownloadButton button {
+        background: #ff69b4;
+        color: black;
+        font-weight: bold;
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 0 12px #ff69b4;
+    }
+
+    .stDownloadButton button:hover {
+        background: #ff85c1;
+        color: #000;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Audio Processing Functions ---
+def load_audio(file):
+    y, sr = librosa.load(file, sr=None, mono=True)
+    return y, sr
+
+def bandpass_filter(data, lowcut, highcut, fs, numtaps=101):
+    taps = firwin(numtaps, [lowcut, highcut], pass_zero=False, fs=fs)
+    return lfilter(taps, 1.0, data)
+
+def apply_equalizer(data, fs, gains):
+    bands = [(60, 250), (250, 4000), (4000, 10000)]  # Bass, Mid, Treble
+    processed = np.zeros_like(data)
+    for (low, high), gain in zip(bands, gains):
+        filtered = bandpass_filter(data, low, high, fs)
+        processed += filtered * gain
+    return processed
+
+# --- Pages ---
+if st.session_state.page == "home":
+    st.markdown("""
+    <div class="center">
+        <h1>🎧 Digital Music Equalizer</h1>
+        <p style='font-size: 1.2em;'>Shape your sound with studio-level precision.</p>
+        <form action="">
+            <button class="start-button" type="submit" name="start" value="1">Start Now</button>
+        </form>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.query_params.get("start") == "1":
+        st.session_state.page = "equalizer"
+        st.session_state.show_intro = True
+        st.rerun()
+
+elif st.session_state.page == "equalizer":
+    if st.session_state.get("show_intro", True):
         st.title("🎛️ Welcome to the Digital Music Equalizer")
 
         st.markdown("""
         This tool lets you enhance your audio with studio-level precision. You can:
-        - Upload any **WAV or MP3** file.
-        - Boost or cut **bass**, **midrange**, and **treble** frequencies.
-        - Instantly listen and download the processed audio.
+        - 🎵 Upload any **WAV or MP3** file.
+        - 🎚️ Boost or cut **bass**, **midrange**, and **treble** frequencies.
+        - 🎧 Instantly listen and download the processed audio.
 
         👉 Click **Continue to Equalizer** to begin!
         """)
