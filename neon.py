@@ -109,16 +109,26 @@ if uploaded_file is not None:
         st.audio(buf, format='audio/wav')
         st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="hotpink_equalized_output.wav")
 
-        # --- Processed Visualization Only ---
-        st.subheader("🔊 Processed Track Waveform")
-        fig, ax = plt.subplots(figsize=(10, 4))
+        # --- Before and After Waveform Visualization ---
+        st.subheader("🎶 Original vs Processed Audio Waveforms")
 
-        time = np.linspace(0, len(output) / fs, num=len(output))
-        ax.plot(time, output, color="#ff69b4", linewidth=0.5)
-        ax.set_title("Processed Audio", fontsize=12, color='#ff69b4')
-        ax.set_xlabel("Time [s]", color='white')
-        ax.set_ylabel("Amplitude", color='white')
-        ax.set_facecolor("#0a0a0a")
-        ax.tick_params(colors='white')
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+
+        time = np.linspace(0, len(data) / fs, num=len(data))
+
+        ax1.plot(time, data, color="#ffffff", linewidth=0.5)
+        ax1.set_title("Original Audio", fontsize=12, color='#ffffff')
+        ax1.set_ylabel("Amplitude", color='white')
+        ax1.set_facecolor("#0a0a0a")
+        ax1.tick_params(colors='white')
+
+        ax2.plot(time, output, color="#ff69b4", linewidth=0.5)
+        ax2.set_title("Processed Audio", fontsize=12, color='#ff69b4')
+        ax2.set_xlabel("Time [s]", color='white')
+        ax2.set_ylabel("Amplitude", color='white')
+        ax2.set_facecolor("#0a0a0a")
+        ax2.tick_params(colors='white')
+
         fig.patch.set_facecolor("#0a0a0a")
+        plt.tight_layout()
         st.pyplot(fig)
