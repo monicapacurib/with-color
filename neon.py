@@ -68,12 +68,8 @@ st.markdown("""
 
 # --- Audio Functions ---
 def load_audio(file):
-    try:
-        y, sr = librosa.load(file, sr=None, mono=True)
-        return y, sr
-    except Exception as e:
-        st.error(f"Could not load audio: {e}")
-        return None, None
+    y, sr = librosa.load(file, sr=None, mono=True)
+    return y, sr
 
 def bandpass_filter(data, lowcut, highcut, fs, numtaps=101):
     taps = firwin(numtaps, [lowcut, highcut], pass_zero=False, fs=fs)
@@ -87,78 +83,42 @@ def apply_equalizer(data, fs, gains):
         processed += filtered * gain
     return processed
 
-# --- Sidebar Navigation ---
-st.sidebar.title("🎧 Navigation")
-page = st.sidebar.radio("Go to", ["🏠 Home", "🎛️ Equalizer"])
+# --- UI ---
+st.title("🎛️ Digital Music Equalizer")
 
-# --- Home Page ---
-if page == "🏠 Home":
-    st.title("🌟 Welcome to Hot Pink DJ Equalizer")
-    st.markdown("""
-    ### 🎵 Customize your sound. Look cool doing it.
-    This app lets you:
-    - 🎚️ Adjust Bass, Midrange, and Treble
-    - 🎧 Preview audio instantly
-    - 📉 See waveforms for original and processed tracks
-    - 💾 Download your remixed sound
+uploaded_file = st.file_uploader("🎵 Upload your audio track (WAV or MP3)", type=["wav", "mp3"])
 
-    ---
-    #### 🔧 Supported Formats:
-    - `.wav`, `.mp3` (max size: 100 MB)
+if uploaded_file is not None:
+    file_size_mb = uploaded_file.size / (1024 * 1024)
+    if file_size_mb > 100:
+        st.error("⚠️ File size exceeds 100 MB limit. Please upload a smaller file.")
+    else:
+        data, fs = load_audio(uploaded_file)
+        st.audio(uploaded_file)
 
-    ---
-    ### 👉 Get started by clicking "🎛️ Equalizer" in the sidebar!
-    """)
-    st.image("https://media.giphy.com/media/3o6Zt481isNVuQI1l6/giphy.gif", use_column_width=True)
+        st.subheader("🎚️ Adjust the Frequencies")
+        bass = st.slider("Bass Boost (60–250 Hz)", 0.0, 2.0, 1.0, 0.1)
+        mid = st.slider("Midrange Boost (250 Hz – 4 kHz)", 0.0, 2.0, 1.0, 0.1)
+        treble = st.slider("Treble Boost (4–10 kHz)", 0.0, 2.0, 1.0, 0.1)
 
-# --- Equalizer Page ---
-elif page == "🎛️ Equalizer":
-    st.title("🎛️ Digital Music Equalizer")
+        output = apply_equalizer(data, fs, [bass, mid, treble])
 
-    uploaded_file = st.file_uploader("🎵 Upload your audio track (WAV or MP3)", type=["wav", "mp3"])
+        # Save and play
+        buf = io.BytesIO()
+        sf.write(buf, output, fs, format='WAV')
+        st.audio(buf, format='audio/wav')
+        st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="hotpink_equalized_output.wav")
 
-    if uploaded_file is not None:
-        file_size_mb = uploaded_file.size / (1024 * 1024)
-        if file_size_mb > 100:
-            st.error("⚠️ File size exceeds 100 MB limit. Please upload a smaller file.")
-        else:
-            data, fs = load_audio(uploaded_file)
-            if data is not None:
-                st.audio(uploaded_file)
+        # --- Processed Visualization Only ---
+        st.subheader("🔊 Processed Track Waveform")
+        fig, ax = plt.subplots(figsize=(10, 4))
 
-                st.subheader("🎚️ Adjust the Frequencies")
-                bass = st.slider("Bass Boost (60–250 Hz)", 0.0, 2.0, 1.0, 0.1)
-                mid = st.slider("Midrange Boost (250 Hz – 4 kHz)", 0.0, 2.0, 1.0, 0.1)
-                treble = st.slider("Treble Boost (4–10 kHz)", 0.0, 2.0, 1.0, 0.1)
-
-                output = apply_equalizer(data, fs, [bass, mid, treble])
-
-                # Save and play
-                buf = io.BytesIO()
-                sf.write(buf, output, fs, format='WAV')
-                buf.seek(0)
-                st.audio(buf, format='audio/wav')
-                st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="hotpink_equalized_output.wav")
-
-                # --- Before and After Waveform ---
-                st.subheader("🔊 Original vs Processed Audio Waveforms")
-
-                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-                time = np.linspace(0, len(data) / fs, num=len(data))
-
-                ax1.plot(time, data, color="#ffffff", linewidth=0.5)
-                ax1.set_title("Original Audio", fontsize=12, color='#ffffff')
-                ax1.set_ylabel("Amplitude", color='white')
-                ax1.set_facecolor("#0a0a0a")
-                ax1.tick_params(colors='white')
-
-                ax2.plot(time, output, color="#ff69b4", linewidth=0.5)
-                ax2.set_title("Processed Audio", fontsize=12, color='#ff69b4')
-                ax2.set_xlabel("Time [s]", color='white')
-                ax2.set_ylabel("Amplitude", color='white')
-                ax2.set_facecolor("#0a0a0a")
-                ax2.tick_params(colors='white')
-
-                fig.patch.set_facecolor("#0a0a0a")
-                plt.tight_layout()
-                st.pyplot(fig)
+        time = np.linspace(0, len(output) / fs, num=len(output))
+        ax.plot(time, output, color="#ff69b4", linewidth=0.5)
+        ax.set_title("Processed Audio", fontsize=12, color='#ff69b4')
+        ax.set_xlabel("Time [s]", color='white')
+        ax.set_ylabel("Amplitude", color='white')
+        ax.set_facecolor("#0a0a0a")
+        ax.tick_params(colors='white')
+        fig.patch.set_facecolor("#0a0a0a")
+        st.pyplot(fig)
