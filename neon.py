@@ -114,9 +114,8 @@ if st.session_state.page == "home":
 
     if st.query_params.get("start") == "1":
         st.session_state.page = "equalizer"
-        st.rerun()
 
-# --- Equalizer Page ---
+# --- Equalizer Page (Introduction) ---
 elif st.session_state.page == "equalizer":
     st.title("🎛️ Digital Music Equalizer")
 
@@ -129,9 +128,9 @@ elif st.session_state.page == "equalizer":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # **Fix: Use session state instead of rerun**
     if st.button("🎚️ Go to Equalizer Controls"):
         st.session_state.page = "controls"
-        st.rerun()
 
 # --- Equalizer Controls Page ---
 elif st.session_state.page == "controls":
