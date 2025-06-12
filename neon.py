@@ -9,11 +9,9 @@ import matplotlib.pyplot as plt
 # --- Page Config ---
 st.set_page_config(page_title="Digital Music Equalizer", layout="centered")
 
-# --- Session state initialization ---
+# --- Session state to switch pages ---
 if "page" not in st.session_state:
     st.session_state.page = "home"
-if "show_intro" not in st.session_state:
-    st.session_state.show_intro = False
 
 # --- Styles ---
 st.markdown("""
@@ -108,28 +106,36 @@ if st.session_state.page == "home":
     <div class="center">
         <h1>🎧 Digital Music Equalizer</h1>
         <p style='font-size: 1.2em;'>Shape your sound with studio-level precision.</p>
+        <form action="">
+            <button class="start-button" type="submit" name="start" value="1">Start Now</button>
+        </form>
     </div>
     """, unsafe_allow_html=True)
 
-    if st.button("🚀 Start Now", key="start-btn"):
+    if st.query_params.get("start") == "1":
         st.session_state.page = "equalizer"
-        st.session_state.show_intro = True
         st.rerun()
 
-# --- Info Page before Equalizer ---
-elif st.session_state.page == "equalizer" and st.session_state.show_intro:
-    st.title("🎶 Welcome to the Equalizer!")
-    st.markdown("""
-    This app lets you fine-tune your audio by adjusting the **bass**, **midrange**, and **treble** levels using digital filters.  
-    Upload your audio track and shape your sound with precision.
-    """)
-    if st.button("🎛️ Continue to Equalizer"):
-        st.session_state.show_intro = False
-        st.rerun()
-
-# --- Equalizer Interface ---
+# --- Equalizer Page ---
 elif st.session_state.page == "equalizer":
     st.title("🎛️ Digital Music Equalizer")
+
+    st.markdown("""
+    <div style="text-align: center; font-size: 1.2em;">
+        <p>Welcome to the Digital Music Equalizer! 🎶</p>
+        <p>Upload your audio track and fine-tune the frequencies to shape your sound.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if st.button("🎚️ Go to Equalizer Controls"):
+        st.session_state.page = "controls"
+        st.rerun()
+
+# --- Equalizer Controls Page ---
+elif st.session_state.page == "controls":
+    st.title("🎚️ Adjust Your Sound")
 
     uploaded_file = st.file_uploader("🎵 Upload your audio track (WAV or MP3)", type=["wav", "mp3"])
 
@@ -152,19 +158,17 @@ elif st.session_state.page == "equalizer":
             buf = io.BytesIO()
             sf.write(buf, output, fs, format='WAV')
             st.audio(buf, format='audio/wav')
-            st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="equalized_output.wav")
+            st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="hotpink_equalized_output.wav")
 
-            # Visualization (Before & After Overlap)
-            st.subheader("🔊 Waveform Comparison")
+            # Visualization
+            st.subheader("🔊 Processed Track Waveform")
             fig, ax = plt.subplots(figsize=(10, 4))
-            time = np.linspace(0, len(data) / fs, num=len(data))
-            ax.plot(time, data, color='gray', alpha=0.5, label="Original")
-            ax.plot(time, output, color="#ff69b4", linewidth=0.5, label="Processed")
-            ax.set_title("Before and After Equalization", fontsize=12, color='#ff69b4')
+            time = np.linspace(0, len(output) / fs, num=len(output))
+            ax.plot(time, output, color="#ff69b4", linewidth=0.5)
+            ax.set_title("Processed Audio", fontsize=12, color='#ff69b4')
             ax.set_xlabel("Time [s]", color='white')
             ax.set_ylabel("Amplitude", color='white')
             ax.set_facecolor("#0a0a0a")
             ax.tick_params(colors='white')
             fig.patch.set_facecolor("#0a0a0a")
-            ax.legend(loc='upper right')
             st.pyplot(fig)
