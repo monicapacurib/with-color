@@ -9,9 +9,11 @@ import matplotlib.pyplot as plt
 # --- Page Config ---
 st.set_page_config(page_title="Digital Music Equalizer", layout="centered")
 
-# --- Session state for navigation ---
+# --- Session state initialization ---
 if "page" not in st.session_state:
     st.session_state.page = "home"
+if "show_intro" not in st.session_state:
+    st.session_state.show_intro = False
 
 # --- Styles ---
 st.markdown("""
@@ -83,7 +85,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Audio Processing Functions ---
+# --- Functions ---
 def load_audio(file):
     y, sr = librosa.load(file, sr=None, mono=True)
     return y, sr
@@ -100,77 +102,69 @@ def apply_equalizer(data, fs, gains):
         processed += filtered * gain
     return processed
 
-# --- Pages ---
+# --- Home Page ---
 if st.session_state.page == "home":
     st.markdown("""
     <div class="center">
         <h1>🎧 Digital Music Equalizer</h1>
         <p style='font-size: 1.2em;'>Shape your sound with studio-level precision.</p>
-        <form action="">
-            <button class="start-button" type="submit" name="start" value="1">Start Now</button>
-        </form>
     </div>
     """, unsafe_allow_html=True)
 
-    if st.query_params.get("start") == "1":
+    if st.button("🚀 Start Now", key="start-btn"):
         st.session_state.page = "equalizer"
         st.session_state.show_intro = True
         st.rerun()
 
+# --- Info Page before Equalizer ---
+elif st.session_state.page == "equalizer" and st.session_state.show_intro:
+    st.title("🎶 Welcome to the Equalizer!")
+    st.markdown("""
+    This app lets you fine-tune your audio by adjusting the **bass**, **midrange**, and **treble** levels using digital filters.  
+    Upload your audio track and shape your sound with precision.
+    """)
+    if st.button("🎛️ Continue to Equalizer"):
+        st.session_state.show_intro = False
+        st.rerun()
+
+# --- Equalizer Interface ---
 elif st.session_state.page == "equalizer":
-    if st.session_state.get("show_intro", True):
-        st.title("🎛️ Welcome to the Digital Music Equalizer")
+    st.title("🎛️ Digital Music Equalizer")
 
-        st.markdown("""
-        This tool lets you enhance your audio with studio-level precision. You can:
-        - 🎵 Upload any **WAV or MP3** file.
-        - 🎚️ Boost or cut **bass**, **midrange**, and **treble** frequencies.
-        - 🎧 Instantly listen and download the processed audio.
+    uploaded_file = st.file_uploader("🎵 Upload your audio track (WAV or MP3)", type=["wav", "mp3"])
 
-        👉 Click **Continue to Equalizer** to begin!
-        """)
+    if uploaded_file is not None:
+        file_size_mb = uploaded_file.size / (1024 * 1024)
+        if file_size_mb > 100:
+            st.error("⚠️ File size exceeds 100 MB limit. Please upload a smaller file.")
+        else:
+            data, fs = load_audio(uploaded_file)
+            st.audio(uploaded_file)
 
-        if st.button("🎚️ Continue to Equalizer"):
-            st.session_state.show_intro = False
-            st.rerun()
+            st.subheader("🎚️ Adjust the Frequencies")
+            bass = st.slider("Bass Boost (60–250 Hz)", 0.0, 2.0, 1.0, 0.1)
+            mid = st.slider("Midrange Boost (250 Hz – 4 kHz)", 0.0, 2.0, 1.0, 0.1)
+            treble = st.slider("Treble Boost (4–10 kHz)", 0.0, 2.0, 1.0, 0.1)
 
-    else:
-        st.title("🎚️ Digital Music Equalizer")
+            output = apply_equalizer(data, fs, [bass, mid, treble])
 
-        uploaded_file = st.file_uploader("🎵 Upload your audio track (WAV or MP3)", type=["wav", "mp3"])
+            # Save and play
+            buf = io.BytesIO()
+            sf.write(buf, output, fs, format='WAV')
+            st.audio(buf, format='audio/wav')
+            st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="equalized_output.wav")
 
-        if uploaded_file is not None:
-            file_size_mb = uploaded_file.size / (1024 * 1024)
-            if file_size_mb > 100:
-                st.error("⚠️ File size exceeds 100 MB limit. Please upload a smaller file.")
-            else:
-                data, fs = load_audio(uploaded_file)
-                st.audio(uploaded_file)
-
-                st.subheader("🎚️ Adjust the Frequencies")
-                bass = st.slider("Bass Boost (60–250 Hz)", 0.0, 2.0, 1.0, 0.1)
-                mid = st.slider("Midrange Boost (250 Hz – 4 kHz)", 0.0, 2.0, 1.0, 0.1)
-                treble = st.slider("Treble Boost (4–10 kHz)", 0.0, 2.0, 1.0, 0.1)
-
-                output = apply_equalizer(data, fs, [bass, mid, treble])
-
-                # Save and play
-                buf = io.BytesIO()
-                sf.write(buf, output, fs, format='WAV')
-                st.audio(buf, format='audio/wav')
-                st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="hotpink_equalized_output.wav")
-
-                # Visualization
-                st.subheader("🔊 Original vs. Processed Waveform")
-                fig, ax = plt.subplots(figsize=(10, 4))
-                time = np.linspace(0, len(data) / fs, num=len(data))
-                ax.plot(time, data, color="white", linewidth=0.5, label="Original")
-                ax.plot(time, output, color="#ff69b4", linewidth=0.5, label="Processed")
-                ax.set_title("Audio Waveform Comparison", fontsize=12, color='white')
-                ax.set_xlabel("Time [s]", color='white')
-                ax.set_ylabel("Amplitude", color='white')
-                ax.set_facecolor("#0a0a0a")
-                ax.tick_params(colors='white')
-                ax.legend(facecolor="#1a001a", edgecolor='white', labelcolor='white')
-                fig.patch.set_facecolor("#0a0a0a")
-                st.pyplot(fig)
+            # Visualization (Before & After Overlap)
+            st.subheader("🔊 Waveform Comparison")
+            fig, ax = plt.subplots(figsize=(10, 4))
+            time = np.linspace(0, len(data) / fs, num=len(data))
+            ax.plot(time, data, color='gray', alpha=0.5, label="Original")
+            ax.plot(time, output, color="#ff69b4", linewidth=0.5, label="Processed")
+            ax.set_title("Before and After Equalization", fontsize=12, color='#ff69b4')
+            ax.set_xlabel("Time [s]", color='white')
+            ax.set_ylabel("Amplitude", color='white')
+            ax.set_facecolor("#0a0a0a")
+            ax.tick_params(colors='white')
+            fig.patch.set_facecolor("#0a0a0a")
+            ax.legend(loc='upper right')
+            st.pyplot(fig)
