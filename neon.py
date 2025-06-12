@@ -143,15 +143,26 @@ elif st.session_state.page == "equalizer":
             st.audio(buf, format='audio/wav')
             st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="hotpink_equalized_output.wav")
 
-            # Visualization
-            st.subheader("🔊 Processed Track Waveform")
-            fig, ax = plt.subplots(figsize=(10, 4))
-            time = np.linspace(0, len(output) / fs, num=len(output))
-            ax.plot(time, output, color="#ff69b4", linewidth=0.5)
-            ax.set_title("Processed Audio", fontsize=12, color='#ff69b4')
-            ax.set_xlabel("Time [s]", color='white')
-            ax.set_ylabel("Amplitude", color='white')
-            ax.set_facecolor("#0a0a0a")
-            ax.tick_params(colors='white')
+            # Before and After Visualization
+            st.subheader("🎨 Waveform Comparison")
+
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
+
+            time = np.linspace(0, len(data) / fs, num=len(data))
+            ax1.plot(time, data, color="white", linewidth=0.5)
+            ax1.set_title("Original Audio", color='white')
+            ax1.set_ylabel("Amplitude", color='white')
+            ax1.tick_params(colors='white')
+            ax1.set_facecolor("#0a0a0a")
+
+            time_out = np.linspace(0, len(output) / fs, num=len(output))
+            ax2.plot(time_out, output, color="#ff69b4", linewidth=0.5)
+            ax2.set_title("Processed Audio", color='white')
+            ax2.set_xlabel("Time [s]", color='white')
+            ax2.set_ylabel("Amplitude", color='white')
+            ax2.tick_params(colors='white')
+            ax2.set_facecolor("#0a0a0a")
+
+            fig.tight_layout()
             fig.patch.set_facecolor("#0a0a0a")
             st.pyplot(fig)
