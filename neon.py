@@ -137,27 +137,21 @@ elif st.session_state.page == "equalizer":
 
             output = apply_equalizer(data, fs, [bass, mid, treble])
 
-            # Save and play processed audio
+            # Save and play
             buf = io.BytesIO()
             sf.write(buf, output, fs, format='WAV')
             st.audio(buf, format='audio/wav')
-            st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="equalized_output.wav")
+            st.download_button("⬇️ Download Processed Audio", buf.getvalue(), file_name="hotpink_equalized_output.wav")
 
-            # Overlaid waveform visualization
-            st.subheader("📊 Original vs. Processed Waveform")
-
-            fig, ax = plt.subplots(figsize=(12, 4))
-            time = np.linspace(0, len(data) / fs, num=len(data))
-
-            ax.plot(time, data, color="white", linewidth=0.5, label="Original")
-            ax.plot(time, output, color="#ff69b4", linewidth=0.5, label="Processed")
-
-            ax.set_title("Audio Waveform Comparison", fontsize=12, color='white')
+            # Visualization
+            st.subheader("🔊 Processed Track Waveform")
+            fig, ax = plt.subplots(figsize=(10, 4))
+            time = np.linspace(0, len(output) / fs, num=len(output))
+            ax.plot(time, output, color="#ff69b4", linewidth=0.5)
+            ax.set_title("Processed Audio", fontsize=12, color='#ff69b4')
             ax.set_xlabel("Time [s]", color='white')
             ax.set_ylabel("Amplitude", color='white')
             ax.set_facecolor("#0a0a0a")
             ax.tick_params(colors='white')
-            ax.legend(facecolor="#1a001a", edgecolor='white', labelcolor='white')
-
             fig.patch.set_facecolor("#0a0a0a")
             st.pyplot(fig)
